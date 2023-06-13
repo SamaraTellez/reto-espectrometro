@@ -1,0 +1,139 @@
+clc 
+clear
+close all
+
+uma = 1.66053886e-27 ;      %valor de uma [Kg]
+qelectron = -1.602663417e-19 ;            %carga del electron [C]
+qp = 1 * qelectron ;               % valor de carga de la partícula [C]
+map = 48 * uma ;        % Valor de masa atomica de la partícula en este caso O3 (12.011*2) [Kg]
+Bx0 = 0 ;                   %campo magnetico inicial en X [T]
+By0 = 0 ;                   %campo magnetico inicial en Y [T]
+Bz0 = 1 ;                 %campo magnetico inicial en Z [T]
+Ex0 = 3e3;                 %campo electrico inicial en X [V/m]
+Ey0 = 3e3;                 %campo electrico inicial en Y [V/m]
+Ez0 = 3e3;                 %campo electrico incial en Z [V/m]
+x0 = 0 ;                    %posición inicial en X [m]
+y0 = 0 ;                    %posición inicial en Y [m]
+z0 = 0 ;                    %posición inicial en Z [m]
+Vx0 = 0.5e6 ;               %Velocidad inicial de X [m/s]
+Vy0 = 0 ;                   %Velocidad inicial de Y [m/s]
+Vz0 = 0 ;                   %Velocidad inicial de Z [m/s]
+
+tf = 0.0001;                %tiempo final [s]
+ti = 0;                     %tiempo inicial [s]
+n = 100000 ;                % # de iteraciones
+h = (tf - ti)/n ;           % tamaño de paso
+
+x = zeros(1,n+1)  ;         %Memoria para guardar iteraciones de distancia de X
+y = zeros(1,n+1)  ;         %Memoria para guardar iteraciones de X
+z = zeros(1,n+1)  ;         %Memoria para guardar iteraciones de X
+x(1) = x0   ;               %estableciendo el primer valor de ubicación en X
+y(1) = y0   ;
+z(1) = z0   ;
+
+vx = zeros(1,n+1) ;
+vy = zeros(1,n+1) ;
+vz = zeros(1,n+1) ;
+vx(1) = Vx0   ;              %estableciendo el primer valor de la velocidad en X
+vy(1) = Vy0   ;              %estableciendo el primer valor de la velocidad en Y
+vz(1) = Vz0   ;              %estableciendo el primer valor de la velocidad en Z
+
+t = ti:h:tf;                %establece el vector tiempo, espacio a donde avanzamos
+
+Ex = (qp/map)*Ex0 ;         %Vector del campo electrico en X
+Ey = (qp/map)*Ey0 ;
+Ez = (qp/map)*Ez0 ;
+Bx = (qp/map)*Bx0 ;         %Vector del campo magnetico en X
+By = (qp/map)*By0 ;
+Bz = (qp/map)*Bz0 ;
+
+dx = @(t, vx) vx ;          %Ecuación anónima para la posición en X
+dy = @(t, vy) vy ;          %Ecuación anónima para la posición en Y
+dz = @(t, vz) vz ;          %Ecuación anónima para la posición en Z
+d2x = @(t, vy, vz) Ex + (vy * Bz) - (vz * By); %Ecuación anónima para la velocidad en X, segunda derivada 
+d2y = @(t, vz, vx) Ey + (vz * Bx) - (vx * Bz); %Ecuación anónima para la velocidad en Y, segunda derivada
+d2z = @(t, vx, vy) Ey + (vx * By) - (vy * Bx); %Ecuación anónima para la velocidad en Z, segunda derivada
+%Ahora sí se viene lo chido, Runge de Kutta para posición en X
+for i = 1:n
+    k1 = h * dx(t(i), vx(i));           %código del profe de Runge de Kutta para cuarto orden, no hay l pq es de una sola solución
+    k2 = h * dx(t(i) + h/2, vx(i) + k1/2) ; %secuencia ya establecida para resolver 
+    k3 = h * dx(t(i) + h/2, vx(i) + k2/2) ;
+    k4 = h * dx(t(i) + h, vx(i) + k3) ;
+    x(i+1) = x(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+%Runge de Kutta para posición en Y
+    k1 = h * dy(t(i), vy(i));           %código del profe de Runge de Kutta para cuarto orden, no hay l pq es de una sola solución
+    k2 = h * dy(t(i) + h/2, vy(i) + k1/2) ; %secuencia ya establecida para resolver 
+    k3 = h * dy(t(i) + h/2, vy(i) + k2/2) ;
+    k4 = h * dy(t(i) + h, vy(i) + k3) ;
+    y(i+1) = y(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+%Runge de Kutta para posición en Z
+    k1 = h * dz(t(i), vz(i));           %código del profe de Runge de Kutta para cuarto orden, no hay l pq es de una sola solución
+    k2 = h * dz(t(i) + h/2, vz(i) + k1/2) ; %secuencia ya establecida para resolver 
+    k3 = h * dz(t(i) + h/2, vz(i) + k2/2) ;
+    k4 = h * dz(t(i) + h, vz(i) + k3) ;
+    z(i+1) = z(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+%Runge Kutta para la velocidad en X
+    k1 = h * d2x(t(i), vy(i), vz(i)) ;
+    k2 = h * d2x(t(i) + h/2, vy(i) + k1/2, vz(i) + k1/2) ;
+    k3 = h * d2x(t(i) + h/2, vy(i) + k2/2, vz(i) + k2/2) ;
+    k4 = h * d2x(t(i) + h, vy(i) + k3, vz(i) + k3) ;
+    vx(i+1) = vx(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+%Runge Kutta para la velocidad en Y
+    k1 = h * d2y(t(i), vz(i), vx(i)) ;
+    k2 = h * d2y(t(i) + h/2, vz(i) + k1/2, vx(i) + k1/2) ;
+    k3 = h * d2y(t(i) + h/2, vz(i) + k2/2, vx(i) + k2/2) ;
+    k4 = h * d2y(t(i) + h, vz(i) + k3, vx(i) + k3) ;
+    vy(i+1) = vy(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+%Runge Kutta para la velocidad en Y
+    k1 = h * d2z(t(i), vx(i), vy(i)) ;
+    k2 = h * d2z(t(i) + h/2, vx(i) + k1/2, vy(i) + k1/2) ;
+    k3 = h * d2z(t(i) + h/2, vx(i) + k2/2, vy(i) + k2/2) ;
+    k4 = h * d2z(t(i) + h, vx(i) + k3, vy(i) + k3) ;
+    vz(i+1) = vz(i) + (k1 + 2*k2 + 2*k3 + k4)/6 ;
+
+%Aceleración: (vf - vi) / h  establecemos "h" pq es nuestro diferencial de tiempo
+    
+end
+
+%Ahora por fin graficamos todo 
+plot3(x,y,z)
+% axis equal
+title("Posición partícula en el espacio")
+xlabel("Posición eje X") 
+ylabel("Posición eje Y") 
+zlabel("Posición eje Z")
+legend("Partícula los teslas")
+figure
+plot3(vx,vy,vz)
+axis equal
+title("Velocidad partícula en trayectoria")
+xlabel("Velocidad en eje X") 
+ylabel("Velocidad en eje Y") 
+zlabel("Velocidad en eje Z")
+legend("Partícula los teslas")
+
+figure 
+
+%Memoria para datos aceleración 
+ax=zeros(1,n);
+ay=zeros(1,n);
+az=zeros(1,n); 
+
+for i=1:n
+    ax(i)=(vx(i+1)-vx(i))/h;
+    ay(i)=(vy(i+1)-vy(i))/h; 
+    az(i)=(vz(i+1)-vz(i))/h;
+end 
+
+t=(ti+h/2):h:tf
+plot3(ax,ay,az)
+zlim([-6.6e+09,-6.5e+09])
+title("Aceleración partícula en x")
+plot(t,ax)
+title("Aceleración partícula en y") 
+plot(t,ay)
+plot(ax,ay)
+title("Aceleración partícula en el espacio, vista superior")
+xlabel("Aceleración en eje X") 
+ylabel("Aceleración en eje Y") 
+
